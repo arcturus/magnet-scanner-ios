@@ -20,7 +20,7 @@ public class NetworkResolver {
 
   static func resolveLocation(lat: Double, lon: Double, callback: (Array<JSON> -> Void)!) {
     let url: String = "\(API_END_POINT)\(lat),\(lon),\(RADIUS)"
-    debugPrint("Performing geo search request: \(url)")
+    print("Performing geo search request: \(url)")
 
     Alamofire.request(.GET, url).responseJSON { response in
       let empty: Array<JSON> = Array<JSON>()
@@ -30,7 +30,7 @@ public class NetworkResolver {
       }
 
       if let json: JSON = JSON(response.result.value!) {
-        debugPrint("JSON: \(json)")
+        print("JSON: \(json)")
         callback(filterJSON(json))
       } else {
         callback(empty)

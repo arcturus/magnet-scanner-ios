@@ -76,7 +76,7 @@ class BeaconScanner: NSObject, Scanner, CBCentralManagerDelegate {
 
     let bytes = getFrameBytes(frame)
     guard let url = getUrl(bytes) else { return }
-    debugPrint("Got %@", url);
+    print("Got %@", url);
     let distance = getDistance(bytes, rssi: RSSI.doubleValue)
 
     callback([
@@ -88,10 +88,10 @@ class BeaconScanner: NSObject, Scanner, CBCentralManagerDelegate {
   private func startScanningSynchronized() {
     dispatch_async(self.beaconOperationsQueue) {
       if self.centralManager.centralManagerState != CBCentralManagerState.PoweredOn {
-        debugPrint("CentralManager state is %d, cannot start scan", self.centralManager.state.rawValue)
+        print("CentralManager state is %d, cannot start scan", self.centralManager.state.rawValue)
         self.shouldBeScanning = true
       } else {
-        debugPrint("=== Starting to scan for Eddystone URLs ===")
+        print("=== Starting to scan for Eddystone URLs ===")
         let services = [CBUUID(string: "FEAA"), CBUUID(string: "FED8")]
         let options = [CBCentralManagerScanOptionAllowDuplicatesKey : true]
         self.centralManager.scanForPeripheralsWithServices(services, options: options)

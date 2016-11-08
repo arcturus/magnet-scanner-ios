@@ -31,6 +31,7 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
   }
   
   func startLocationManager() -> Bool {
+    print("Starting geolocation scanner")
     guard CLLocationManager.locationServicesEnabled() else {
       return false;
     }
@@ -66,11 +67,12 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
     }
     
     lastLocation = location
+    print("Got location \(location)")
     
     let lat: CLLocationDegrees = location.coordinate.latitude
     let lon: CLLocationDegrees = location.coordinate.longitude
     
-    debugPrint("Got location update \(lat),\(lon)")
+    print("Got location update \(lat),\(lon)")
     
     // Here is where we call to the magnet service and then update the callback
     NetworkResolver.resolveLocation(lat, lon: lon, callback: {(result: Array<JSON>) in
@@ -84,7 +86,7 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
   }
   
   func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
-    debugPrint("Got error during location \(error)")
+    print("Got error during location \(error)")
     stop()
   }
 }
