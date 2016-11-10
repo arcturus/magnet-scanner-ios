@@ -13,7 +13,7 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
   let locationManager: CLLocationManager = CLLocationManager()
   var callback: ((Dictionary<String, AnyObject>) -> Void)!
   var initialized: Bool = false
-  var lastLocation: CLLocation!
+  var bestEffort: CLLocation!
   let MIN_DISTANCE: Double = 10
   
   init(callback: (Dictionary<String, AnyObject>) -> Void) {
@@ -22,18 +22,19 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
   }
   
   func start() {
-    lastLocation = nil
     startLocationManager()
   }
   
   func stop() {
+    NSObject.cancelPreviousPerformRequestsWithTarget(self)
     locationManager.stopUpdatingLocation()
   }
   
   func startLocationManager() -> Bool {
-    print("Starting geolocation scanner")
+    NSLog("MagnetScanner :: Starting geolocation scanner")
     guard CLLocationManager.locationServicesEnabled() else {
-      return false;
+      NSLog("MagnetScanner :: Location Services not enabled")
+      return false
     }
     
     guard initialized == false else {
@@ -42,7 +43,9 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
     }
     
     locationManager.delegate = self
-    locationManager.desiredAccuracy = kCLLocationAccuracyBest
+    locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+    locationManager.distanceFilter = 5
+    locationManager.headingFilter = 5
     locationManager.requestWhenInUseAuthorization()
     
     locationManager.startUpdatingLocation()
@@ -50,43 +53,54 @@ class ScannerGeolocation: NSObject, CLLocationManagerDelegate, Scanner {
     
     return true;
   }
-    
-  private func isValidLocation(location: CLLocation) -> Bool {
-    return lastLocation == nil || lastLocation!.distanceFromLocation(location) < MIN_DISTANCE
-  }
   
   // Deletegate methods
   func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-    stop()
+    guard locations.count > 0 else {
+        return
+    }
+    
     guard let location: CLLocation = locations.last else {
-      return
+        return
     }
     
-    guard isValidLocation(location) else {
-      return
+    guard location.horizontalAccuracy >= 0 else {
+        return
     }
     
-    lastLocation = location
-    print("Got location \(location)")
+    guard bestEffort == nil || bestEffort!.horizontalAccuracy > location.horizontalAccuracy else {
+        return
+    }
     
+    bestEffort = location
+    
+    guard location.horizontalAccuracy <= self.locationManager.desiredAccuracy else {
+        NSLog("MagnetScanner :: Discarding location \(location) because accuracy \(location.horizontalAccuracy) is \(self.locationManager.desiredAccuracy)")
+        return;
+    }
+    
+    NSLog("MagnetScanner :: Got location \(location)")
     let lat: CLLocationDegrees = location.coordinate.latitude
     let lon: CLLocationDegrees = location.coordinate.longitude
     
-    print("Got location update \(lat),\(lon)")
+    stop()
+    
+    NSLog("MagnetScanner :: Got location update \(lat),\(lon)")
     
     // Here is where we call to the magnet service and then update the callback
     NetworkResolver.resolveLocation(lat, lon: lon, callback: {(result: Array<JSON>) in
-      result.forEach({ (json) in
-        let url = json["url"].string
-        let channel = json["channel_id"].string
-        let magnetItem: Dictionary<String, AnyObject> = ["url": url!, "channel_id": channel!]
-        self.callback(magnetItem)
-      })
+        result.forEach({ (json) in
+            let url = json["url"].string
+            let channel = json["channel_id"].string
+            let magnetItem: Dictionary<String, AnyObject> = ["url": url!, "channel_id": channel!]
+            NSLog("MagnetScanner :: Found item \(magnetItem)")
+            self.callback(magnetItem)
+        })
     })
   }
   
   func locationManager(manager: CLLocationManager, didFailWithError error: NSError) {
-    print("Got error during location \(error)")
+    NSLog("MagnetScanner :: Got error during location \(error)")
     stop()
   }
 }
